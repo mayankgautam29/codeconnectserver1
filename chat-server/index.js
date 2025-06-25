@@ -4,31 +4,37 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const Message = require("../modules/messageModel.js");
+const Message = require("../modules/messageModel.js"); // adjust if needed
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
+// ✅ Update CORS to allow Vercel + localhost during dev
+const CLIENT_ORIGINS = [
+  "https://codeconnectmain.vercel.app", // Vercel frontend
+  "http://localhost:3000",              // Local development
+];
+
 app.use(
   cors({
-    origin: process.env.DOMAIN || "http://localhost:3000",
+    origin: CLIENT_ORIGINS,
     methods: ["GET", "POST"],
     credentials: true,
   })
 );
 
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.DOMAIN || "http://localhost:3000",
+    origin: CLIENT_ORIGINS,
     methods: ["GET", "POST"],
   },
 });
 
 const PORT = process.env.PORT || 4000;
-
 app.get("/", (req, res) => {
   res.send("✅ Chat Server is running!");
 });
@@ -39,22 +45,19 @@ mongoose
     console.log("✅ MongoDB connected");
 
     server.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🚀 Server running on port ${PORT}`);
     });
 
     io.on("connection", (socket) => {
-      console.log("✅ A user connected:", socket.id);
+      console.log("✅ User connected:", socket.id);
 
       socket.on("joinRoom", (roomId) => {
         socket.join(roomId);
-        console.log(`📡 User ${socket.id} joined room: ${roomId}`);
-        console.log("🔍 Rooms:", Array.from(socket.rooms));
+        console.log(`📡 ${socket.id} joined room: ${roomId}`);
       });
 
       socket.on("sendMessage", async ({ roomId, message, sender, receiver }) => {
-        console.log("📨 Incoming message:", { roomId, message, sender, receiver });
-
-        if (!sender || !receiver || !message || !roomId) {
+        if (!roomId || !message || !sender || !receiver) {
           console.error("❌ Invalid message payload");
           return;
         }
@@ -65,16 +68,16 @@ mongoose
         });
 
         try {
-          const savedMessage = await Message.create({
+          const saved = await Message.create({
             senderId: sender,
             receiverId: receiver,
             roomId,
             text: message,
           });
 
-          console.log("✅ Message saved:", savedMessage._id);
+          console.log("✅ Message saved:", saved._id);
         } catch (err) {
-          console.error("❌ Error saving message:", err.message);
+          console.error("❌ DB error:", err.message);
         }
       });
 
