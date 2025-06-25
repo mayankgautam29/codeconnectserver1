@@ -26,16 +26,22 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
+
+const PORT = process.env.PORT || 4000;
+
+app.get("/", (req, res) => {
+  res.send("✅ Chat Server is running!");
+});
+
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
-    server.listen(4000, () => {
-      console.log("🚀 Server running on http://localhost:4000");
+
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
     });
+
     io.on("connection", (socket) => {
       console.log("✅ A user connected:", socket.id);
 
